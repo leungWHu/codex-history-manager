@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Codex History Manager</title>
+  <link rel="stylesheet" href="/style.css?v=20260622-5">
+</head>
+<body>
+  <aside>
+    <header>
+      <div><span class="mark">C</span><strong>Codex History Manager</strong></div>
+      <div class="header-actions">
+        <span id="count">…</span>
+        <button id="theme-toggle" class="icon-button" title="切换明暗主题" aria-label="切换明暗主题">
+          <span class="theme-icon" aria-hidden="true">☾</span>
+        </button>
+      </div>
+    </header>
+    <div class="search"><span>⌕</span><input id="query" placeholder="搜索会话、目录…" autocomplete="off"></div>
+    <div id="sessions" class="sessions"><div class="hint">正在读取本地会话…</div></div>
+  </aside>
+  <main id="main">
+    <div class="empty"><div class="orb">C</div><h1>本地会话档案</h1><p>从左侧选择一段对话。数据仅由本机 Python 服务读取。</p></div>
+  </main>
+  <dialog id="delete-dialog" class="delete-dialog">
+    <form method="dialog">
+      <div class="dialog-head">
+        <div><span class="danger-mark">!</span><strong>永久删除会话</strong></div>
+        <button value="cancel" class="dialog-close" aria-label="关闭">×</button>
+      </div>
+      <p id="delete-summary" class="delete-summary"></p>
+      <label class="confirm-label">复制此短 ID</label>
+      <div class="short-id-row">
+        <code id="delete-short-id" tabindex="0"></code>
+        <button type="button" id="copy-delete-id" class="copy-id-button">复制</button>
+      </div>
+      <label class="confirm-label" for="delete-confirm-input">输入或粘贴短 ID 以确认</label>
+      <input id="delete-confirm-input" class="confirm-input" autocomplete="off" spellcheck="false">
+      <div class="dialog-actions">
+        <button value="cancel" class="cancel-button">取消</button>
+        <button value="confirm" id="confirm-delete-button" class="danger-button" disabled>永久删除</button>
+      </div>
+    </form>
+  </dialog>
+  <script src="/app.js?v=20260622-5"></script>
+</body>
+</html>
