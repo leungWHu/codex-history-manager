@@ -20,7 +20,8 @@ from urllib.parse import parse_qs, urlparse
 ROOT = Path(__file__).resolve().parent
 STATIC_DIR = ROOT / "static"
 DEFAULT_CODEX_HOME = Path(os.environ.get("CODEX_HOME", Path.home() / ".codex"))
-API_VERSION = 2
+API_VERSION = 3
+SESSION_DIR_NAMES = ("sessions", "archived_sessions")
 SESSION_ID_RE = re.compile(r"[0-9a-f]{8}-[0-9a-f-]{27,}", re.I)
 LEGACY_MOJIBAKE_MARKERS = frozenset("¿ÆÑÄÂ¼´×¤µ±¨²ÁÏÔÐÐ")
 INTERNAL_USER_PREFIXES = (
@@ -206,24 +207,44 @@ class SessionStore:
     def __init__(self, codex_home: Path):
         self.codex_home = codex_home.expanduser().resolve()
 
+    def roots(self) -> list[Path]:
+        return [(self.codex_home / name).resolve() for name in SESSION_DIR_NAMES]
+
     def files(self) -> list[Path]:
-        sessions = self.codex_home / "sessions"
-        return list(sessions.rglob("*.jsonl")) if sessions.is_dir() else []
+        result: list[Path] = []
+        for root in self.roots():
+            if root.is_dir():
+                result.extend(root.rglob("*.jsonl"))
+        return result
+
+    def is_archived_path(self, path: Path) -> bool:
+        archived_root = (self.codex_home / "archived_sessions").resolve()
+        try:
+            path.resolve().relative_to(archived_root)
+            return True
+        except ValueError:
+            return False
 
     def find_path(self, session_id: str) -> Path | None:
         if not SESSION_ID_RE.fullmatch(session_id):
             return None
-        sessions_root = (self.codex_home / "sessions").resolve()
+        allowed_roots = self.roots()
         for path in self.files():
             if session_id not in path.name:
                 continue
             resolved = path.resolve()
-            try:
-                resolved.relative_to(sessions_root)
-            except ValueError:
+            if not any(self._is_below(resolved, root) for root in allowed_roots):
                 return None
             return resolved
         return None
+
+    @staticmethod
+    def _is_below(path: Path, root: Path) -> bool:
+        try:
+            path.relative_to(root)
+            return True
+        except ValueError:
+            return False
 
     def list(self, query: str = "", limit: int = 200) -> list[dict[str, Any]]:
         titles = load_titles(self.codex_home)
@@ -242,6 +263,7 @@ class SessionStore:
             row["title"] = repair_legacy_text(indexed.get("title") or first_user.splitlines()[0][:100]) or "未命名会话"
             row["updated_at"] = indexed.get("updated_at") or row["updated_at"]
             row["is_temporary"] = is_temporary_workspace(row["cwd"])
+            row["is_archived"] = self.is_archived_path(path)
             if needle and needle not in (row["title"] + " " + row["cwd"] + " " + first_user).casefold():
                 continue
             row.pop("messages", None)
@@ -262,12 +284,13 @@ class SessionStore:
         result["title"] = repair_legacy_text(indexed.get("title") or "") or "未命名会话"
         result["updated_at"] = indexed.get("updated_at") or result["updated_at"]
         result["is_temporary"] = is_temporary_workspace(result["cwd"])
+        result["is_archived"] = self.is_archived_path(path)
         result["local_path"] = result.pop("file", str(path))
         result["local_path_exists"] = path.is_file()
         return result
 
     def delete(self, session_id: str) -> bool:
-        """Delete exactly one matching session file below the sessions root."""
+        """Delete exactly one matching session file below a supported session root."""
         path = self.find_path(session_id)
         if path is None:
             return False

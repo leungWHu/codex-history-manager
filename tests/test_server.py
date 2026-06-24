@@ -65,6 +65,29 @@ class SessionParserTests(unittest.TestCase):
             (home / "session_index.jsonl").write_text(json.dumps({"id": session_id, "thread_name": "测试标题", "updated_at": "2026-01-02T00:00:00Z"}), encoding="utf-8")
             self.assertEqual(SessionStore(home).list()[0]["title"], "测试标题")
 
+    def test_store_reads_archived_sessions(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            home = Path(tmp)
+            folder = home / "archived_sessions" / "2026" / "01" / "01"
+            folder.mkdir(parents=True)
+            session_id = "00000000-0000-0000-0000-000000000001"
+            events = [
+                {"timestamp": "2026-01-01T00:00:00Z", "type": "session_meta", "payload": {"id": session_id, "cwd": "/repo"}},
+                {"timestamp": "2026-01-01T00:00:01Z", "type": "response_item", "payload": {"type": "message", "role": "user", "content": [{"type": "input_text", "text": "归档问题"}]}},
+            ]
+            session_file = folder / f"rollout-{session_id}.jsonl"
+            session_file.write_text("\n".join(json.dumps(x, ensure_ascii=False) for x in events), encoding="utf-8")
+
+            rows = SessionStore(home).list()
+            self.assertEqual(len(rows), 1)
+            self.assertTrue(rows[0]["is_archived"])
+            self.assertEqual(rows[0]["local_path"], str(session_file))
+
+            detail = SessionStore(home).get(session_id)
+            self.assertIsNotNone(detail)
+            self.assertTrue(detail["is_archived"])
+            self.assertEqual(detail["messages"][0]["text"], "归档问题")
+
     def test_store_deletes_only_matching_session(self):
         with tempfile.TemporaryDirectory() as tmp:
             home = Path(tmp)
