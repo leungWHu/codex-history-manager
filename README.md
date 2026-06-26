@@ -2,9 +2,9 @@
 
 中文 | [English](README.en.md)
 
-一个本地运行的 Codex 历史会话 Web 管理工具。启动后会在本机开启一个 Web 服务，你可以直接在浏览器里搜索、查看、分组和删除 Codex 历史会话，操作路径比手动翻 `.codex` 目录更清晰。
+一个本地运行的 Codex 历史会话 Web 管理工具。启动后会在本机开启一个 Web 服务，可以直接在浏览器里搜索、查看、分组和删除 Codex 历史会话，操作路径比手动翻 `.codex` 目录更清晰。
 
-它会详细列出每个会话，包括项目分组、临时会话、归档会话、关联项目、会话缓存地址、创建时间、更新时间和消息数量。删除会话时会先生成清理计划，并要求二次确认，尽量避免手抖误删。
+它会详细列出每个会话，包括项目分组、临时会话、归档会话、关联项目、会话文件路径、创建时间、更新时间和消息数量。删除会话时会先生成清理计划，并要求二次确认，尽量避免手抖误删。
 
 项目只使用 Python 标准库和原生前端，不需要安装额外依赖。
 
@@ -119,8 +119,10 @@ $env:PORT="8765"
 .\start_windows.ps1
 ```
 
-## 支持的 Codex 数据
 
+## 删除机制
+
+### 扫描数据
 当前实现主要读取和清理以下 Codex 本地数据：
 
 - `sessions/**/*.jsonl`
@@ -133,18 +135,9 @@ $env:PORT="8765"
 - `shell_snapshots/`
 - `archived_sessions/`
 
-如果未来 Codex 修改本地数据结构，删除功能可能会拒绝执行，并在页面上显示原因。
+> 如果未来 Codex 修改本地数据结构，删除功能可能会拒绝执行，并在页面上显示原因。遇到这类情况时，建议先暂停删除并反馈问题。
 
-## 正确删除 Codex 会话
-
-建议优先使用 Codex 各客户端自带的删除入口来管理历史会话。本工具提供的是更直观的本地可视化管理和补充清理能力，适合在你需要集中浏览、核对路径或批量整理时使用。
-
-- **Codex CLI**：在当前会话中可使用 `/delete` 删除当前会话并退出；也可以在终端使用 `codex delete` 按会话 ID 或名称删除历史会话。只想隐藏而不删除 transcript 时，使用 `/archive` 或 `codex archive`。
-- **Windows Desktop / Codex app**：先在桌面端归档，再从归档会话中删除。只移除项目不会删除历史会话；项目目录或 worktree 被移除后，线程仍可能保留在历史中。
-- **PyCharm / JetBrains 插件中的 Codex**：优先在插件自己的会话列表中右键会话名称删除。这类 IDE 内会话应按插件入口管理，不要假定它会同步删除外部 CLI 或桌面端历史。
-- **VS Code 中的 Codex 会话**：如果扩展内没有明确删除入口，使用外部 Codex CLI 删除对应会话，例如 `/delete` 当前会话，或通过 `codex delete <SESSION_ID>` 删除指定历史会话。
-
-## 删除机制
+### 删除逻辑
 
 删除单个会话时，工具会先生成删除计划，显示预计清理的 SQLite 记录数量和文件数量。用户必须输入该会话的短 ID，才会执行删除。
 
@@ -199,6 +192,17 @@ python -m unittest discover -s tests -v
 
 ## 鸣谢
 
-感谢 [liuyoumi/codex-history](https://github.com/liuyoumi/codex-history)。本项目的完整删除思路和风险识别参考了该项目的删除逻辑。
+感谢 [liuyoumi/codex-history](https://github.com/liuyoumi/codex-history)。本项目的删除思路和风险识别参考了该项目的删除逻辑。
 
 本项目的代码、文档和发布说明均由 Codex 生成，并在本地测试与人工审阅后整理发布。
+
+## 写在最后
+
+如果你是高级用户，熟悉命令行，官方内置的归档和删除方式仍然是首选：
+
+- **Codex CLI**：在当前会话中可使用 `/delete` 删除当前会话并退出；也可以在终端使用 `codex delete` 按会话 ID 或名称删除历史会话。只想隐藏而不删除 transcript 时，使用 `/archive` 或 `codex archive`。
+- **Windows Desktop / Codex app**：优先使用桌面端提供的归档或删除入口。只移除项目不会删除历史会话；项目目录或 worktree 被移除后，线程仍可能保留在历史中。
+- **PyCharm / JetBrains 插件中的 Codex**：优先在插件自己的会话列表中右键会话名称删除。这类 IDE 内会话应按插件入口管理，不要假定它会同步删除外部 CLI 或桌面端历史。
+- **VS Code 中的 Codex 会话**：如果扩展内没有明确删除入口，使用外部 Codex CLI 删除对应会话，例如 `/delete` 当前会话，或通过 `codex delete <SESSION_ID>` 删除指定历史会话。
+
+本工具**Codex History Manager**提供的是更直观的本地可视化管理和补充清理能力，适合在你需要集中浏览、核对路径或批量整理时使用。
